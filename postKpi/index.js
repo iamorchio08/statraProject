@@ -26,45 +26,53 @@ const collectionUrl = `${dbUrl}/colls/kpis`;
 module.exports = function (context, req) {
     context.log('JavaScript HTTP function for create a kpi.');        
     var validation = validateParams(req.body);
-    if(validation.ok){                    
-        createKpi(req.body)
-        .then(response=>{
-            console.log('response create kpi',response);
-            var endpoint = getRealEndpointForKpi(response.id);                
-            context.res= {
-                status: 201,
-                body: endpoint
-            }                
-            return context.done();
-        })
-        .catch(err=>{
-            console.log('error',err);
-            context.res ={ 
+    if(!req.query.test){
+        if(validation.ok){                    
+            createKpi(req.body)
+            .then(response=>{
+                console.log('response create kpi',response);
+                var endpoint = getRealEndpointForKpi(response.id);                
+                context.res= {
+                    status: 201,
+                    body: endpoint
+                }                
+                return context.done();
+            })
+            .catch(err=>{
+                console.log('error',err);
+                context.res ={ 
+                    status : 400,
+                    statusText : 'Error',
+                    body : err
+                };                       
+                return context.done();
+            })                                                    
+        }
+        else{
+            context.res = {
                 status : 400,
                 statusText : 'Error',
-                body : err
-            };                       
-            return context.done();
-        })                                                    
+                body: 'Invalid Params'
+            }
+            return context.done();        
+        }          
     }
-    else{
-        context.res = {
-            status : 400,
-            statusText : 'Error',
-            body: 'Invalid Params'
-        }
-        return context.done();        
-    }          
-    //if(ok){
-        //insert kpi definition into master collection of kpis              
-      //  var endpoint = getEndpointForKpi();                
-                
-        //context.done(null,{res: {body : context.bindings.outputDocument } });
-        //context.done(null,{res: {statusCode: 201,body : endpoint, status: 'Success created'}});
-    //}    
+    else{ //mock
+        var endpoint = getEndpointForKpi();                                        
+        context.done(null,{res: {statusCode: 201,body : endpoint, status: 'Success created'}});  
+    }    
 };
 
-async function createKpi(params){
+function createKpi(params){
+    return getDatabase()
+    .then(()=>getCollection())
+    .then(()=>newKpi(params))
+    .catch((err)=>{
+        return err;
+    })    
+}
+/*
+async function createKpi(params){ // not supported in production
     //try{
         console.log('async kpi');
         let db = await getDatabase();
@@ -78,6 +86,7 @@ async function createKpi(params){
     //}
     //return newKpi(params);    
 }
+*/
 function getDatabase() {
     console.log(`Getting database`);
 
@@ -107,6 +116,7 @@ function getCollection() {
         client.readCollection(collectionUrl, (err, result) => {
             if (err) {
                 console.log('collection not found');
+                reject(err);
                 /*
                 if (err.code == HttpStatusCodes.NOTFOUND) {
                     client.createCollection(databaseUrl, config.collection, { offerThroughput: 400 }, (err, created) => {
@@ -126,8 +136,7 @@ function getCollection() {
 
 function newKpi(document) {
     //let documentUrl = `${collectionUrl}/docs/${document.id}`;
-    console.log(`Creating document`);
-    document.enable = true;
+    console.log(`Creating document`);    
     return new Promise((resolve, reject) => {
         client.createDocument(collectionUrl, document, (err, created) => {
             if (err) reject(err)

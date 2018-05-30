@@ -3,69 +3,29 @@ var KpiSchema = {
     "type" : "object",
     "properties":  {
         "name" : { "type" : "string", "minLength": 2, "maxLength": 50 },
-        "formula" : {"type" : "string"},
-        "kpiElements" : {
-            "type" : "array",
-            "items" : {"type" : "object"},
-            "minItems" : 1
-        },
-        "weight" : { "type" : "number" , "minimum" : 1},
+        "formula" : {"type" : "object"},        
+        "weight" : { "type" : "string" },
         "goals" : {
           "type" : "object",
           "properties" : {
-              "minValue" : {"type" : "number"},
-              "maxValue" : {"type" : "number"},
-              "goalDirection": {"type" : "string"},
-              "bad": {
-                  "type" : "object",
-                  "properties" : {
-                      "minValue" : {"type" : "number"},
-                      "maxValue" : {"type" : "number"}
-                  }
-              },
-              "fair" : {
-                  "type" : "object",
-                  "properties" : {
-                        "minValue" : {"type" : "number"},
-                        "maxValue" : {"type" : "number"}
-                  }
-              },
-              "good": {
-                  "type" : "object",
-                  "properties" : {
-                    "minValue" : {"type" : "number"},
-                    "maxValue" : {"type" : "number"}
-                  }
-              }
+              "min" : {"type" : "number"},
+              "max" : {"type" : "number"},
+              "direction": {"type" : "string"},
+              "value" : {"type" : "array"},
+              "marks" : {"type" : "object"}
           }
         }
     },
-    "required": ["name","kpiElements","formula","weight","goals"]
+    "required": ["name","formula","weight","goals"]
 };
 
 module.exports = KpiSchema;
-
 /*
-// Address, to be embedded on Person
-var addressSchema = {
-    "id": "/SimpleAddress",
-    "type": "object",
-    "properties": {
-      "lines": {
-        "type": "array",
-        "items": {"type": "string"}
-      },
-      "zip": {"type": "string"},
-      "city": {"type": "string"},
-      "country": {"type": "string"}
-    },
-    "required": ["country"]
-  };
- 
+var kpiDef =  
   {
     "belongsTo": [
       {
-        "categoryId": 0,
+        "category": 'string',
         "subCategories": [
           "string"
         ]
@@ -75,42 +35,30 @@ var addressSchema = {
     "description": "string",
     "frequency": {
       "unit": "string",
-      "value": 0,
-      "label": "string"
+      "value": number,
+      "label": "string",
+      "valueUnit" : number
     },
     "assignTo": {
-      "targetTypeId": "string",
-      "targetIds": [
-        "string"
-      ]
+      "targetType": "string",
+      "targets": [{}]
+    },    
+    "formula": {
+      queryFilter : 'string',
+      dimensions : [{}],
+      metrics : [{}]
     },
-    "kpiElements": [
-      {
-        "name": "string",
-        "unit": "string",
-        "columnAtFormulaExtract": "string"
-      }
-    ],
-    "formula": "string",
     "unit": "string",
-    "weight": 0,
+    "weight": 'string',
     "goals": {
-      "minValue": 0,
-      "maxValue": 0,
-      "goalDirection": "string",
-      "bad": {
-        "minValue": 0,
-        "maxValue": 0
-      },
-      "fair": {
-        "minValue": 0,
-        "maxValue": 0
-      },
-      "good": {
-        "minValue": 0,
-        "maxValue": 0
-      }
-    }
+      "min": number,
+      "max": number,
+      "direction": "string",
+      "value" : [1,5,8,15], //example [1,5] [5,8] [8,15]
+      "marks" : {}
+    },
+    "enable" : boolean,
+    "datasets" : ['strings'] // nomenclatura :  tenant_nombredataset
   }
-
-  */
+*/
+  
