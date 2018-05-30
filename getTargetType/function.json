@@ -6,7 +6,7 @@
       "type": "httpTrigger",
       "direction": "in",
       "name": "req",
-      "route": "targetTypes/{targetTypeId:int}",
+      "route": "targetType",
       "methods": ["get"]
     },
     {
