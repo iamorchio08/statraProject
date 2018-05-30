@@ -26,35 +26,26 @@ const collectionUrl = `${dbUrl}/colls/kpis`;
 module.exports = function (context, req) {
     context.log('JavaScript HTTP function for create a kpi.');        
     var validation = validateParams(req.body);
-    if(validation.ok){
-        getDatabase()
-        .then((response)=>{
-            console.log('database found',response);
-            return getCollection();
-        })
-        .then(()=> queryCollection(req.body.name))
-        .then((response)=>{
-            console.log('collection found',response);
-            return createKpi(req.body);
-        })        
-        .then((response)=>{
-          console.log('document created',response);
-          var endpoint = getRealEndpointForKpi(response.id);                
-          context.res= {
-              status: 201,
-              body: endpoint
-          }
-          return context.done();
+    if(validation.ok){                    
+        createKpi(req.body)
+        .then(response=>{
+            console.log('response create kpi',response);
+            var endpoint = getRealEndpointForKpi(response.id);                
+            context.res= {
+                status: 201,
+                body: endpoint
+            }                
+            return context.done();
         })
         .catch(err=>{
             console.log('error',err);
             context.res ={ 
                 status : 400,
                 statusText : 'Error',
-                body : err.body
+                body : err
             };                       
-            return context.done();         
-        })
+            return context.done();
+        })                                                    
     }
     else{
         context.res = {
@@ -73,6 +64,20 @@ module.exports = function (context, req) {
     //}    
 };
 
+async function createKpi(params){
+    //try{
+        console.log('async kpi');
+        let db = await getDatabase();
+        let coll = await getCollection();
+        let ok = await queryCollection(params.name);
+        return newKpi(params);        
+    //}
+    //catch(err){
+     //   console.log('err',err);
+     //   return Promise.reject(new Error(err));
+    //}
+    //return newKpi(params);    
+}
 function getDatabase() {
     console.log(`Getting database`);
 
@@ -119,7 +124,7 @@ function getCollection() {
     });
 }
 
-function createKpi(document) {
+function newKpi(document) {
     //let documentUrl = `${collectionUrl}/docs/${document.id}`;
     console.log(`Creating document`);
     document.enable = true;
@@ -150,7 +155,7 @@ function createKpi(document) {
 function queryCollection(name) {
     console.log(`Querying collection`);
     var sqlQuery = 'SELECT VALUE r.name FROM root r WHERE r.name = "'+name+'"';
-    console.log('sql query',sqlQuery);
+    //console.log('sql query',sqlQuery);
     return new Promise((resolve, reject) => {
         client.queryDocuments(
             collectionUrl,
@@ -177,7 +182,7 @@ function queryCollection(name) {
 
 const validateParams = (data)=> {
     console.log('validate params ');
-    console.log('validate', validate(data,kpiSchema))
+    //console.log('validate', validate(data,kpiSchema))
     var validation = validate(data,kpiSchema);
     var res= {};
     if(validation.errors.length){
@@ -203,3 +208,34 @@ const getRealEndpointForKpi = (id)=>{
     var endpoint = 'https://statrafndev.azurewebsites.net/api/kpis/'+id+'/metadata';
     return endpoint;
 }
+
+/*
+        getDatabase()
+        .then((response)=>{
+            console.log('database found',response);
+            return getCollection();
+        })
+        .then(()=> queryCollection(req.body.name))
+        .then((response)=>{
+            console.log('collection found',response);
+            return createKpi(req.body);
+        })        
+        .then((response)=>{
+          console.log('document created',response);
+          var endpoint = getRealEndpointForKpi(response.id);                
+          context.res= {
+              status: 201,
+              body: endpoint
+          }
+          return context.done();
+        })
+        .catch(err=>{
+            console.log('error',err);
+            context.res ={ 
+                status : 400,
+                statusText : 'Error',
+                body : err.body
+            };                       
+            return context.done();         
+        })
+        */

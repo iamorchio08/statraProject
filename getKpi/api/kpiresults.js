@@ -19,6 +19,9 @@ var KpiResults = [
 ]
 
 module.exports = KpiResults;
+
+//var KpiResults = 
+
 /*
 var KpiResults = [{
     KPIRef: "Speed translation",
