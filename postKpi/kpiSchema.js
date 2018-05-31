@@ -58,7 +58,9 @@ var kpiDef =
       "marks" : {}
     },
     "enable" : boolean,
-    "datasets" : ['strings'] // nomenclatura :  tenant_nombredataset
+    "datasets" : ['strings'], // nomenclatura :  tenant_nombredataset
+    "tennat" : "ahf",
+    "documentType" : "kpi"
   }
 */
   

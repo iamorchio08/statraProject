@@ -17,20 +17,22 @@ client = new DocumentClient(host, {masterKey: masterKey},
 //cube = require('fs').readFileSync('./groupBy/cube.string', 'utf8');
 OLAPCube = require('lumenize').OLAPCube;
 const dbUrl = 'dbs/statra-db';
-const kpisCollection = `${dbUrl}/colls/kpis`;
+const kpisCollection = `${dbUrl}/colls/definitions`;
 const ahfCollection = `${dbUrl}/colls/AHF`;
-    
+const testCollection = `${dbUrl}/colls/ahf`;
 module.exports = function (context, req) {
+    return testRes();
+    
     context.log('http started',req.query);            
     if(req.query && req.query.dataset){        
         let dataset = req.query.dataset;       
         getDatabase(client)
         .then((response)=>{
-            context.log('response getDatabase')
+            
             return getCollection(client);
         })
         .then((response)=>{
-            context.log('response get collection')
+            
             return getKpisByDataset(dataset,client,context);        
         })
         .then((response)=>{
@@ -38,12 +40,21 @@ module.exports = function (context, req) {
             return calcKpis(response);            
         })
         .then(response=>{
-            context.log('promises kpis',response);
-            context.res = {body : 'Kpis calculated'}
+            //recibo un array de results de los diferentes calculos de kpis
+            //response structure = {results,kpiDef}
+            //context.log('promises kpis',response);
+            console.log('response from calculo de kpis');
+            return processResults(response)
+            //context.res = {body : 'Kpis calculated'}
+            //context.done();
+        })
+        .then(response=>{
+            console.log('response from process results',response[0].length);
+            context.res = {body : response[0]};
             context.done();
         })    
         .catch(err=>{
-            context.log('err',err);            
+            console.log('err',err);            
             context.res = {body : 'Error al calcular kpi '+err};
             context.done();
         })
@@ -106,17 +117,18 @@ function getCollection(client){
 }
 
 function getKpisByDataset(dataset,client){
-    var sqlQuery = "SELECT k.name,k.formula, k.unit, k.assignTo.targetType";
+    
+    var sqlQuery = "SELECT k.name,k.formula, k.unit, k.assignTo.targetType, k.tenant, REPLACE(k.name,' ','') as nameConcat";
       sqlQuery +=  " FROM kpis as k";
       sqlQuery += " JOIN datasets IN k.datasets";
-      sqlQuery += " WHERE datasets IN ('"+dataset+"') AND k.tenant = 'ahf' AND k.enable = true ";
+      sqlQuery += " WHERE k.documentType = 'kpi' AND datasets IN ('"+dataset+"') AND k.enable = true ";
         
     return new Promise((resolve,reject)=>{
         client.queryDocuments(
             kpisCollection,
             sqlQuery
         ).toArray((err, results) => {
-            console.log('results',results);
+            
             if (err) reject(err)            
             else if (!results) {                
                 reject({msg : 'results not found'})
@@ -135,36 +147,35 @@ function getKpisByDataset(dataset,client){
     })
 }
 
-function calcKpis(kpis,context){
+function calcKpis(kpis){
     var promises = kpis.map(kpi => calcKpi(kpi));
     return Promise.all(promises)    
 }
 
 function calcKpi(kpiDef){
     //get kpi's formula sql
-    var sqlQueryKpi = kpiDef.formula;
-    var dimensions = [ // in future it'll be kpiDef.dimensions
-        {field: 'kpi_target'},
-        {field: 'kpi_value_at'}
-    ];
-    var metrics = [ // in future it'll be kpiDef.metrics
-        {field : 'PID', f: 'count'}
-    ];    
-    var cubeConfig = {dimensions,metrics};
+    var filterQuery,dimensions,metris,cubeConfig,memo,sprocLink,sprocLink;
+    sprocLink = ahfCollection + '/sprocs/cube';    
+    filterQuery = kpiDef.formula.queryFilter;
+    dimensions  = kpiDef.formula.dimensions;
+    metrics = kpiDef.formula.metrics;
+    cubeConfig = {dimensions,metrics};    
     cubeConfig.keepTotals = false;                    
-    var memo = {cubeConfig : cubeConfig,filterQuery: filterQuery};    
-    var sprocLink = collectionLink + '/sprocs/cube';
+    memo = {cubeConfig : cubeConfig,filterQuery: filterQuery};            
 
     return new Promise((resolve,reject)=>{
         //execute formula
         //proces results
         client.executeStoredProcedure(sprocLink, memo, function(err, response) {
             if(err) return reject(err);
-            console.log('response',response);                        
-            cube = OLAPCube.newFromSavedState(response.savedCube);
+            console.log('group by store procedure executed');
+            //console.log('lresponse keys',Object.keys(response));
+            //console.log('response saved cube keys',Object.keys(response.savedCube));            
+            cube = OLAPCube.newFromSavedState( response.savedCube);
             //console.log('properties cube',Object.keys(cube));
-            console.log('celss',cube.cells.length);
-            resolve(cube.cells);
+            console.log('results[0]',cube.cells[0]);
+            var res = {results : cube.cells, kpiDef : kpiDef}
+            resolve(res); 
             //cube = new OLAPCube(config, response.savedCube);
             //console.log('cube',cube.getCells());                                        
         });
@@ -189,6 +200,90 @@ function calcKpi(kpiDef){
     })    
 }
 
+function processResults(response){
+    var promises = response.map(res => processResult(res.results,res.kpiDef))
+    console.log('promises length',promises.length);
+    return Promise.all(promises);
+}
+
+function processResult(results,kpiDef){
+    var splitArray = []  //array of arrays , where each item contain batchData
+    var updatedAt = new Date().toISOString();
+    var count = 0;
+    var partialArray = [];
+    return new Promise((resolve,reject)=>{
+        results.forEach(doc =>{
+            // assign the missing properties 
+            if(count < 999){                
+                doc.kpiName = kpiDef.name;
+                doc.unit = kpiDef.unit;
+                doc.targetType = kpiDef.targetType;
+                doc.documentType = 'results_'+kpiDef.tenant+'_'+kpiDef.nameConcat;
+                doc.updatedAt = updatedAt;        
+                partialArray.push(doc);
+                count++;
+            }
+            else{
+                console.log('llegue a 1000');
+                splitArray.push(partialArray);
+                partialArray = [];
+                count = 0;
+            }                
+        })
+        if(count > 0){
+            console.log('quedò data en partial array',count);
+            splitArray.push(partialArray);
+        }
+        console.log('split array length',splitArray.length);
+        batchInsert(splitArray)
+        .then(response=>{            
+            resolve(response)
+        })
+        .catch(err=>{
+            console.log('err from batchInsert',err);
+            reject(err)
+        })
+        //resolve(splitArray);
+    })
+    
+    
+}
+
+function batchInsert(arrayDocs){
+    var count = 0;
+    var sprocBulkInsert = testCollection + '/sprocs/bulkInsert';
+    
+    return new Promise((resolve,reject)=>{
+        insertDocs(arrayDocs[count])
+
+        function insertDocs(docs){
+            var objDocs = {data : docs};
+            console.log('inserting ..', docs.length, ' docss')            
+            client.executeStoredProcedure(sprocBulkInsert, objDocs, checkInsert) //(err,results)=>{                
+        }
+
+        function checkInsert(err,response){
+            console.log('response insert',response);
+            if(err) return reject(err)
+            count++;
+            if(count < arrayDocs.length){
+                insertDocs(arrayDocs[count])
+            }
+            else{
+                resolve(count) // deberia retornar la cantidad total acumulada
+            }
+        }
+    })
+}
+
+function testRes(){
+    var sql ='SELECT * FROM c where c.kpiName = "Kpi real data query" ';
+    client.queryDocuments(testCollection,sql)
+    .toArray((err,results)=>{
+        console.log('results length',results.length);
+    })
+}
+/*
 function insertResults(kpiDef,results,isoDate){
     var count = 0;    
     return new Promise((resolve,reject)=>{
@@ -226,5 +321,13 @@ function insertResults(kpiDef,results,isoDate){
     })            
                            
 }
-
- 
+*/
+/*
+var dimensions = [ // in future it'll be kpiDef.dimensions
+        {field: 'kpi_target'},
+        {field: 'kpi_value_at'}
+    ];
+var metrics = [ // in future it'll be kpiDef.metrics
+    {field : 'PID', f: 'count'}
+];
+*/    
