@@ -21,7 +21,7 @@ const kpisCollection = `${dbUrl}/colls/definitions`;
 const ahfCollection = `${dbUrl}/colls/AHF`;
 const testCollection = `${dbUrl}/colls/ahf`;
 module.exports = function (context, req) {
-    return testRes();
+    //return testRes();
     
     context.log('http started',req.query);            
     if(req.query && req.query.dataset){        
@@ -40,6 +40,7 @@ module.exports = function (context, req) {
             return calcKpis(response);            
         })
         .then(response=>{
+            context.done();
             //recibo un array de results de los diferentes calculos de kpis
             //response structure = {results,kpiDef}
             //context.log('promises kpis',response);
@@ -162,41 +163,48 @@ function calcKpi(kpiDef){
     cubeConfig = {dimensions,metrics};    
     cubeConfig.keepTotals = false;                    
     memo = {cubeConfig : cubeConfig,filterQuery: filterQuery};            
-
+    
     return new Promise((resolve,reject)=>{
+        insertUntilNotContinuation(sprocLink,memo);
         //execute formula
         //proces results
-        client.executeStoredProcedure(sprocLink, memo, function(err, response) {
-            if(err) return reject(err);
-            console.log('group by store procedure executed');
-            //console.log('lresponse keys',Object.keys(response));
-            //console.log('response saved cube keys',Object.keys(response.savedCube));            
-            cube = OLAPCube.newFromSavedState( response.savedCube);
-            //console.log('properties cube',Object.keys(cube));
-            console.log('results[0]',cube.cells[0]);
-            var res = {results : cube.cells, kpiDef : kpiDef}
-            resolve(res); 
-            //cube = new OLAPCube(config, response.savedCube);
-            //console.log('cube',cube.getCells());                                        
-        });
-        /*client.queryDocuments(ahfCollection, sqlQueryKpi)
-        .toArray((err, results) => {
-            //console.log('results',results);
-            //return resolve(results)
-            if (err) reject(err)
-            if(results.length){
-                var updatedAt = new Date().toISOString();                
-                insertResults(kpiDef,results,updatedAt)
-                .then(response=>{
-                    resolve(response)
-                })
-                .catch(err=>{
-                    reject(err)
-                })                
+        function insertUntilNotContinuation(sprocLink,memo){
+            client.executeStoredProcedure(sprocLink, memo,checkContinuation) //, function(err, response) {
+                //if(err) return reject(err);
+                //console.log('group by store procedure executed');
+                //console.log('lresponse keys',Object.keys(response));
+                //console.log('response saved cube keys',Object.keys(response.savedCube));            
+                
+                //console.log('properties cube',Object.keys(cube));
+
+                //cube = OLAPCube.newFromSavedState( response.savedCube);
+                //console.log('results[0]',cube.cells[0]);
+                //var res = {results : cube.cells, kpiDef : kpiDef}
+                //resolve(res); 
+                //cube = new OLAPCube(config, response.savedCube);
+                //console.log('cube',cube.getCells());                                        
+            //});        
+        }
+
+        function checkContinuation(err,response){
+            if(err) reject(err)
+            //console.log('response',response.Response);
+            console.log('properties',Object.keys(response));
+                        
+            if(response.continuation != null){
+                cube = OLAPCube.newFromSavedState( response.savedCube);
+                console.log('results',cube.cells.length);
+                console.log('continuation',response.continuation);
+                //insertUntilNotContinuation(sprocLink,response)
             }
-            else
-                resolve(true);                        
-        });*/
+            else{
+                resolve('ok');
+                cube = OLAPCube.newFromSavedState( response.savedCube);
+                console.log('results',cube.cells.length);
+                console.log('not continuation');
+            }
+        }
+        
     })    
 }
 
