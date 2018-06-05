@@ -21,7 +21,7 @@ const client = new DocumentClient(host,
 //const databaseDefinition = { id: "statra-db" };
 //const collectionDefinition = { id: "kpis" };
 const dbUrl = 'dbs/statra-db';
-const collectionUrl = `${dbUrl}/colls/kpis`;
+const collectionUrl = `${dbUrl}/colls/definitions`;
 
 module.exports = function (context, req) {
     context.log('JavaScript HTTP function for create a kpi.');        

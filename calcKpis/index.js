@@ -29,29 +29,25 @@ module.exports = function (context, req) {
         getDatabase(client)
         .then((response)=>{
             
-            return getCollection(client);
+            return getCollection();
         })
         .then((response)=>{
             
-            return getKpisByDataset(dataset,client,context);        
+            return getKpisByDataset(dataset);        
         })
         .then((response)=>{
             context.log('response get kpis');
-            return calcKpis(response);            
+            return calcKpis(response,dataset);            
         })
-        .then(response=>{
-            context.done();
+        .then(response=>{            
             //recibo un array de results de los diferentes calculos de kpis
-            //response structure = {results,kpiDef}
-            //context.log('promises kpis',response);
+            //response structure = {results,kpiDef}            
             console.log('response from calculo de kpis');
-            return processResults(response)
-            //context.res = {body : 'Kpis calculated'}
-            //context.done();
+            return processResults(response)                        
         })
         .then(response=>{
-            console.log('response from process results',response[0].length);
-            context.res = {body : response[0]};
+            //console.log('response from process results',response[0].length);
+            context.res = {body :{data: response, msg:'Kpi calculated' }};
             context.done();
         })    
         .catch(err=>{
@@ -85,7 +81,7 @@ module.exports = function (context, req) {
     })    
 }
 */
-function getDatabase(client){
+function getDatabase(){
     return new Promise((resolve,reject)=>{
         client.readDatabase(dbUrl, (err, result) => {
             if (err) {
@@ -103,7 +99,7 @@ function getDatabase(client){
     })
 }
 
-function getCollection(client){
+function getCollection(){
     return new Promise((resolve,reject)=>{
         client.readCollection(kpisCollection, (err, result) => {
             if (err) {
@@ -117,7 +113,7 @@ function getCollection(client){
     })
 }
 
-function getKpisByDataset(dataset,client){
+function getKpisByDataset(dataset){
     
     var sqlQuery = "SELECT k.name,k.formula, k.unit, k.assignTo.targetType, k.tenant, REPLACE(k.name,' ','') as nameConcat";
       sqlQuery +=  " FROM kpis as k";
@@ -132,14 +128,7 @@ function getKpisByDataset(dataset,client){
             
             if (err) reject(err)            
             else if (!results) {                
-                reject({msg : 'results not found'})
-                //reject(res)
-                /*for (var queryResult of results) {
-                    let resultString = JSON.stringify(queryResult);
-                    console.log(`\tQuery returned ${resultString}`);
-                }
-                console.log();
-                resolve(results);*/
+                reject({msg : 'results not found'})                
             }
             else{
                 resolve(results);
@@ -148,14 +137,16 @@ function getKpisByDataset(dataset,client){
     })
 }
 
-function calcKpis(kpis){
-    var promises = kpis.map(kpi => calcKpi(kpi));
-    return Promise.all(promises)    
+function calcKpis(kpis,dataset){
+    var promises = kpis.map(kpi => calcKpi(kpi,dataset));
+    return Promise.all(promises)      
 }
 
-function calcKpi(kpiDef){
-    //get kpi's formula sql
-    var filterQuery,dimensions,metris,cubeConfig,memo,sprocLink,sprocLink;
+function calcKpi(kpiDef,dataset){
+    //get kpi's formula sql , metrics and dimensions
+    console.log('calcKpi',kpiDef.name);
+    var filterQuery,dimensions,metris,cubeConfig,memo,sprocLink,sprocLink,dataRes;
+    dataRes = [];
     sprocLink = ahfCollection + '/sprocs/cube';    
     filterQuery = kpiDef.formula.queryFilter;
     dimensions  = kpiDef.formula.dimensions;
@@ -163,54 +154,47 @@ function calcKpi(kpiDef){
     cubeConfig = {dimensions,metrics};    
     cubeConfig.keepTotals = false;                    
     memo = {cubeConfig : cubeConfig,filterQuery: filterQuery};            
-    
+    let opts = {partitionKey : dataset};
     return new Promise((resolve,reject)=>{
-        insertUntilNotContinuation(sprocLink,memo);
+        execUntilNotContinuation(sprocLink,memo);
         //execute formula
         //proces results
-        function insertUntilNotContinuation(sprocLink,memo){
-            client.executeStoredProcedure(sprocLink, memo,checkContinuation) //, function(err, response) {
-                //if(err) return reject(err);
-                //console.log('group by store procedure executed');
-                //console.log('lresponse keys',Object.keys(response));
-                //console.log('response saved cube keys',Object.keys(response.savedCube));            
+        function execUntilNotContinuation(sprocLink,memo){            
+            client.executeStoredProcedure(sprocLink, memo,opts,checkContinuation) 
                 
-                //console.log('properties cube',Object.keys(cube));
-
-                //cube = OLAPCube.newFromSavedState( response.savedCube);
-                //console.log('results[0]',cube.cells[0]);
-                //var res = {results : cube.cells, kpiDef : kpiDef}
-                //resolve(res); 
-                //cube = new OLAPCube(config, response.savedCube);
-                //console.log('cube',cube.getCells());                                        
-            //});        
         }
 
-        function checkContinuation(err,response){
-            if(err) reject(err)
-            //console.log('response',response.Response);
-            console.log('properties',Object.keys(response));
-                        
-            if(response.continuation != null){
-                cube = OLAPCube.newFromSavedState( response.savedCube);
-                console.log('results',cube.cells.length);
-                console.log('continuation',response.continuation);
-                //insertUntilNotContinuation(sprocLink,response)
+        //validate if exists continuation token to retrieve more results
+        function checkContinuation(err,response,headers){
+            if(err && err.code === 429 && headers['x-ms-retry-after-ms']){
+                console.log("Retrying after " + headers['x-ms-retry-after-ms']);
+                setTimeout(function() {                    
+                    execUntilNotContinuation(sprocLink,memo);
+                }, headers['x-ms-retry-after-ms']);
             }
-            else{
-                resolve('ok');
-                cube = OLAPCube.newFromSavedState( response.savedCube);
-                console.log('results',cube.cells.length);
-                console.log('not continuation');
+            else if(err && !response){
+                return reject(err)
             }
+            else{                
+                if(response.continuation != null){
+                    console.log('continuation');                    
+                    execUntilNotContinuation(sprocLink,response)
+                }
+                else{ //continuation end                                         
+                    cube = OLAPCube.newFromSavedState( response.savedCube);
+                    dataRes = dataRes.concat(cube.cells);
+                    console.log('end continuation',cube.cells);
+                    var res = {results : dataRes, kpiDef : kpiDef}
+                    resolve(res); 
+                }                                
+            }                                                                    
         }
         
     })    
 }
 
-function processResults(response){
-    var promises = response.map(res => processResult(res.results,res.kpiDef))
-    console.log('promises length',promises.length);
+function processResults(response){    
+    var promises = response.map(res => processResult(res.results,res.kpiDef))    
     return Promise.all(promises);
 }
 
@@ -222,17 +206,18 @@ function processResult(results,kpiDef){
     return new Promise((resolve,reject)=>{
         results.forEach(doc =>{
             // assign the missing properties 
-            if(count < 999){                
+            if(count < 999){
+                delete doc._count;                                
                 doc.kpiName = kpiDef.name;
                 doc.unit = kpiDef.unit;
                 doc.targetType = kpiDef.targetType;
-                doc.documentType = 'results_'+kpiDef.tenant+'_'+kpiDef.nameConcat;
+                doc.documentType = 'results_'+kpiDef.tenant+'_'+kpiDef.nameConcat;                
                 doc.updatedAt = updatedAt;        
                 partialArray.push(doc);
                 count++;
             }
-            else{
-                console.log('llegue a 1000');
+            else{     
+                console.log('999');
                 splitArray.push(partialArray);
                 partialArray = [];
                 count = 0;
@@ -242,7 +227,7 @@ function processResult(results,kpiDef){
             console.log('quedò data en partial array',count);
             splitArray.push(partialArray);
         }
-        console.log('split array length',splitArray.length);
+        console.log('split array length for kpi ', kpiDef.name,' >>>',splitArray.length);
         batchInsert(splitArray)
         .then(response=>{            
             resolve(response)
@@ -250,43 +235,59 @@ function processResult(results,kpiDef){
         .catch(err=>{
             console.log('err from batchInsert',err);
             reject(err)
-        })
-        //resolve(splitArray);
+        })        
     })
     
     
 }
 
+//receive an array of batch documents to insert with store procedure
+//grouped by 
 function batchInsert(arrayDocs){
     var count = 0;
-    var sprocBulkInsert = testCollection + '/sprocs/bulkInsert';
-    
+    var sprocBulkInsert = ahfCollection + '/sprocs/bulkInsert';
+    var partitionKeyValue = arrayDocs[0][0].documentType    
+    var opts = {partitionKey : partitionKeyValue};
     return new Promise((resolve,reject)=>{
         insertDocs(arrayDocs[count])
 
         function insertDocs(docs){
             var objDocs = {data : docs};
             console.log('inserting ..', docs.length, ' docss')            
-            client.executeStoredProcedure(sprocBulkInsert, objDocs, checkInsert) //(err,results)=>{                
+            client.executeStoredProcedure(sprocBulkInsert, objDocs,opts, checkInsert) //(err,results)=>{                
         }
 
-        function checkInsert(err,response){
-            console.log('response insert',response);
-            if(err) return reject(err)
-            count++;
-            if(count < arrayDocs.length){
-                insertDocs(arrayDocs[count])
+        function checkInsert(err,response,headers){
+            if(err && err.code === 429 && headers['x-ms-retry-after-ms']){
+                console.log("Retrying after " + headers['x-ms-retry-after-ms']);
+                setTimeout(function() {
+                    insertDocs(arrayDocs[count]);
+                }, headers['x-ms-retry-after-ms']);
+            }
+            else if(err){                
+                console.log('headers err',headers);                    
+                return reject(err)
             }
             else{
-                resolve(count) // deberia retornar la cantidad total acumulada
-            }
+                console.log('docs inserted');            
+                count++;
+                if(count < arrayDocs.length){
+                    insertDocs(arrayDocs[count])
+                }
+                else{
+                    resolve(count) // deberia retornar la cantidad total acumulada
+                }
+            }   
+                
+                        
         }
     })
 }
 
 function testRes(){
-    var sql ='SELECT * FROM c where c.kpiName = "Kpi real data query" ';
-    client.queryDocuments(testCollection,sql)
+    var sql ='SELECT * FROM c where c.documentType = "results_ahf_Kpirealdataquerytest" ';
+    var opt = {partitionKey : '/results_ahf_Kpirealdataquerytest'}
+    client.queryDocuments(ahfCollection,sql,opt)
     .toArray((err,results)=>{
         console.log('results length',results.length);
     })
