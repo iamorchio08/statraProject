@@ -1,9 +1,30 @@
 const { graphqlAzureFunctions } = require('apollo-server-azure-functions');
 const { makeExecutableSchema, addMockFunctionsToSchema } = require('graphql-tools');
 const {typeDefs, myCustomScalarType } = require('./typeDefs');
+var db = require('../db/lib');
 
 const resolverFunctions = {
-  Date : myCustomScalarType
+  Date : myCustomScalarType,
+  Query : {
+    targetsByTargetType(obj, args, context, info) {
+      return db.getTargetByTargetType(args.targetType)
+    },
+  },
+  Target: {
+    kpis(obj,args,context,info){      
+      return db.getKpiByTargetType(obj.targetType)      
+    }
+  },
+  Kpi:{
+    name(obj,args,context,info){      
+      return;            
+    },
+    results(obj,args,context,info){
+      //dado un kpi , obtener los resultados en base al documentType results_tenant_kpiname
+      return db.getResultsBykpi(obj)
+    }
+  },
+  
 }
 const schema = makeExecutableSchema({ typeDefs: typeDefs ,resolvers : resolverFunctions});
 
@@ -15,9 +36,10 @@ addMockFunctionsToSchema({
         return new Date()
     },
     Int: ()=>{
-      Math.floor(Math.random() * (1000-1) + 1)
+      return Math.floor(Math.random() * (1000-1) + 1)
     }
-}
+  },
+  preserveResolvers : true
  });
 
 /*
@@ -48,6 +70,7 @@ const resolvers = {
 */
 module.exports = function (context, req) {
     context.log('JavaScript HTTP trigger function processed a request.');
-    graphqlAzureFunctions({ schema })(context, req);        
-    //context.done();
+    graphqlAzureFunctions({ schema })(context, req);            
 };
+
+

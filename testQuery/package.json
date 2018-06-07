@@ -1,0 +1,20 @@
+{
+  "name": "graphql",
+  "version": "1.0.0",
+  "description": "graphql module",
+  "main": "index.js",
+  "dependencies": {
+    "apollo-server-azure-functions": "^1.3.6",
+    "apollo-server-core": "^1.3.6",
+    "azure-functions-typescript": "^0.0.1",
+    "documentdb": "^1.14.4",
+    "graphql": "^0.13.2",
+    "graphql-tools": "^3.0.2"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC"
+}

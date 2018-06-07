@@ -64,25 +64,26 @@ exports.typeDefs = `
         location: String
         targetType: TargetType
         statraScore: StatraScoreResult
-        kpis: Kpi
+        kpis: [Kpi]
         dataEvents: [DataEvent]        
         tenant: Tenant
     }
 
     type Kpi {
-        kpiName: String!
+        name: String!
         weight: Int        
         datasources: [String]
         results: [KpiResult]
     }
     
     type KpiResult {
-        value: Int!
-        valueAt: Date
+        kpi_value: Int!
+        kpi_value_at: String
         updatedAt: Date
     }
 
-    type Query { 
+    type Query {
+        targetsByTargetType(targetType: String): [Target]
         targets: [Target]
         tenant: Tenant
         targetTypes: [TargetType]
