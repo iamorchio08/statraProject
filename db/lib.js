@@ -32,7 +32,7 @@ exports.getTargetByTargetType = (targetType)=>{
 }
   
 exports.getKpiByTargetType = (targetType)=>{    
-    let sqlQuery = "SELECT * FROM c where c.assignTo.targetType = '"+targetType+"' ";
+    let sqlQuery = "SELECT * FROM c where c.assignTo.targetType = '"+targetType+"' AND c.enable = true";
     return new Promise((resolve,reject)=>{
         client.queryDocuments(defColl,sqlQuery)
         .toArray((err,results)=>{      
@@ -45,7 +45,7 @@ exports.getKpiByTargetType = (targetType)=>{
 exports.getResultsBykpi = (kpiDef)=>{
     let nameKpiWithoutSpace = kpiDef.name.replace(/\s/g,"");  
     let docTypeResultKpi = 'results_'+kpiDef.tenant+'_'+nameKpiWithoutSpace;    
-    let sqlQuery = "SELECT top 13 * FROM c where c.documentType = '"+docTypeResultKpi+"' ";
+    let sqlQuery = "SELECT top 13 * FROM c where c.documentType = '"+docTypeResultKpi+"' ORDER BY c.updatedAt";
     return new Promise((resolve,reject)=>{
       client.queryDocuments(collectionUrl,sqlQuery)
       .toArray((err,results)=>{

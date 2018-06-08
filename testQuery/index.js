@@ -8,7 +8,7 @@ const resolverFunctions = {
   Query : {
     targetsByTargetType(obj, args, context, info) {
       return db.getTargetByTargetType(args.targetType)
-    },
+    }    
   },
   Target: {
     kpis(obj,args,context,info){      
