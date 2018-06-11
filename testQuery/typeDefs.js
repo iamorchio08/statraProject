@@ -56,6 +56,7 @@ exports.typeDefs = `
     }
 
     type Target {
+        id: String
         firstName: String
         lastName: String
         jobTitle: String
@@ -71,9 +72,10 @@ exports.typeDefs = `
 
     type Kpi {
         name: String!
-        weight: Int        
+        weight: String!        
         datasources: [String]
         results: [KpiResult]
+        goals : Goal
     }
     
     type KpiResult {
@@ -83,7 +85,7 @@ exports.typeDefs = `
     }
 
     type Query {
-        targetsByTargetType(targetType: String): [Target]
+        targetsByTargetType(tenant: String!, targetType: String!, kpiName: String!,range: [Int!]!, date: Date): [Target]
         targets: [Target]
         tenant: Tenant
         targetTypes: [TargetType]

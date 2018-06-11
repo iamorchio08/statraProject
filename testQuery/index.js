@@ -7,21 +7,24 @@ const resolverFunctions = {
   Date : myCustomScalarType,
   Query : {
     targetsByTargetType(obj, args, context, info) {
-      return db.getTargetByTargetType(args.targetType)
+      context.args = args; //to access in sub-resolvers
+      context.args.date = new Date().toISOString();
+      console.log('context',context);
+      return db.getTargetByTargetType(args)
     }    
   },
   Target: {
-    kpis(obj,args,context,info){      
-      return db.getKpiByTargetType(obj.targetType)      
+    kpis(obj,args,context,info){            
+      return db.getKpiByTarget(obj.id,context.args.kpiName) //byIdTarget and kpiName     
     }
   },
   Kpi:{
     name(obj,args,context,info){      
       return;            
     },
-    results(obj,args,context,info){
+    results(obj,args,context,info){      
       //dado un kpi , obtener los resultados en base al documentType results_tenant_kpiname
-      return db.getResultsBykpi(obj)
+      return db.getResultsBykpi(obj,context.args.range,context.args.date)
     }
   },
   
