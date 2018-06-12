@@ -6,11 +6,14 @@ var db = require('../db/lib');
 const resolverFunctions = {
   Date : myCustomScalarType,
   Query : {
-    targetsByTargetType(obj, args, context, info) {
+    getTargets(obj, args, context, info) {
       context.args = args; //to access in sub-resolvers
       context.args.date = new Date().toISOString();
       console.log('context',context);
       return db.getTargetByTargetType(args)
+    },
+    kpis(obj, args, context, info){
+      return db.getKpisByTargetType(args);
     }    
   },
   Target: {

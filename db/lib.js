@@ -59,3 +59,15 @@ exports.getResultsBykpi = (kpiDef,range,date)=>{
       })
     })
 }
+
+exports.getKpisByTargetType = ({tenant,targetType,enable})=>{
+    let sqlQuery = "SELECT * from c where c.tenant = '"+tenant+"' AND c.assignTo.targetType = '"+targetType+"' AND c.enable = "+enable+" "; 
+    //console.log('sql query',sqlQuery);
+    return new Promise((resolve,reject)=>{
+        client.queryDocuments(defColl, sqlQuery)
+        .toArray((err,results)=>{
+            if(err) return reject(err)
+            resolve(results)
+        })
+    })
+}
