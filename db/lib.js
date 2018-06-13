@@ -31,9 +31,25 @@ exports.getTargetByTargetType = ({tenant, targetType, kpiName, date})=>{
     })
 }
 
-//retrieve kpis by targetID ,
-exports.getKpiByTarget = (targetID,kpiName)=>{       
-    let sqlQuery = "SELECT * FROM c where c.name = '"+kpiName+"' AND ARRAY_CONTAINS(c.assignTo.targets,{'targetID' : '"+targetID+"'}) AND c.enable = true";    
+//retrieve kpis by targetID  and kpi name,
+exports.getKpiByTargetAndKpiname = (target,kpiName)=>{
+    //let sqlQuery = "SELECT * FROM c where c.name = '"+kpiName+"' AND ARRAY_CONTAINS(c.assignTo.targets,{'targetID' : '"+target.id+"'}) AND c.enable = true";    
+    let targetFullName = target.firstName.trim()+' '+target.lastName.trim();
+    let sqlQuery = "SELECT {'targetFullname': '"+targetFullName+"', 'name': c.name } as kpi, c.name, c.tenant from c where c.name = '"+kpiName+"' AND ARRAY_CONTAINS(c.assignTo.targets,{'targetID' : '"+target.id+"'}) AND c.enable = true";
+    console.log('sqlquerykpi',sqlQuery);
+    return new Promise((resolve,reject)=>{
+        client.queryDocuments(defColl,sqlQuery)
+        .toArray((err,results)=>{            
+            if(err) return reject(err)
+            resolve(results)
+        })
+    })
+}
+
+exports.getKpiByTarget = (targetID)=>{
+    console.log('target id',targetID);
+    let sqlQuery = "SELECT * FROM c where ARRAY_CONTAINS(c.assignTo.targets,{'targetID' : '"+targetID+"'}) AND c.enable = true";    
+
     return new Promise((resolve,reject)=>{
         client.queryDocuments(defColl,sqlQuery)
         .toArray((err,results)=>{      
@@ -44,12 +60,13 @@ exports.getKpiByTarget = (targetID,kpiName)=>{
 }
 
 //incluir filtrado con rango de valores y fecha
-exports.getResultsBykpi = (kpiDef,range,date)=>{
+exports.getResultsBykpiRangeValue = (kpiDef,range,date)=>{
+    console.log('fullnametarget',kpiDef.kpi.targetFullname);
     let nameKpiWithoutSpace = kpiDef.name.replace(/\s/g,"");  
     let docTypeResultKpi = 'results_'+kpiDef.tenant+'_'+nameKpiWithoutSpace;    
     let init = range[0];
     let end = range[1];
-    let sqlQuery = "SELECT top 13 * FROM c where c.documentType = '"+docTypeResultKpi+"' AND (c.kpi_value BETWEEN "+init+" AND "+end+") AND c.kpi_value_at < '"+date+"' ORDER BY c.updatedAt";
+    let sqlQuery = "SELECT top 13 * FROM c where c.documentType = '"+docTypeResultKpi+"' AND c.kpi_target = '"+kpiDef.kpi.targetFullname+"' AND (c.kpi_value BETWEEN "+init+" AND "+end+") AND c.kpi_value_at < '"+date+"' ORDER BY c.updatedAt DESC ";
     console.log('sqlquery',sqlQuery);
     return new Promise((resolve,reject)=>{
       client.queryDocuments(collectionUrl,sqlQuery)
@@ -57,6 +74,21 @@ exports.getResultsBykpi = (kpiDef,range,date)=>{
         if(err) return reject(err)
         resolve(results)
       })
+    })
+}
+
+exports.getResultsByKpiAndTarget = (kpiDef,targetFullName)=>{
+    let nameKpiWithoutSpace = kpiDef.name.replace(/\s/g,"");
+    let docTypeResultKpi = 'results_'+kpiDef.tenant+'_'+nameKpiWithoutSpace;
+    let sqlQuery = "SELECT top 13 * FROM c where c.documentType = '"+docTypeResultKpi+"' AND c.kpi_target = '"+targetFullName+"' ORDER BY c.kpi_value_at DESC ";
+    console.log('query cra',sqlQuery);
+    return new Promise((resolve,reject)=>{
+        client.queryDocuments(collectionUrl,sqlQuery)
+        .toArray((err,results)=>{
+            console.log('err',err);
+            if(err) return reject(err)
+            resolve(results)
+        })
     })
 }
 
@@ -68,6 +100,32 @@ exports.getKpisByTargetType = ({tenant,targetType,enable})=>{
         .toArray((err,results)=>{
             if(err) return reject(err)
             resolve(results)
+        })
+    })
+}
+
+exports.getTargetTypes = ({tenant})=>{
+    let sqlQuery = 'SELECT DISTINCT c.targetType FROM c where c.documentType = "target"';    
+    let opt = {partitionKey : 'target'}
+    return new Promise((resolve,reject)=>{
+        client.queryDocuments(collectionUrl,sqlQuery,opt)
+        .toArray((err,results)=>{
+            console.log('ress',results);
+            if(err) return reject(err);
+            resolve(results)
+        })
+    })
+}
+
+exports.getTargetById = ({tenant, targetID})=>{
+    let sqlQuery = "SELECT * from c where c.documentType = 'target' AND c.id = '"+targetID+"' ";
+    console.log('query',sqlQuery);
+    let opt = {partitionKey : 'target'};
+    return new Promise((resolve,reject)=>{
+        client.queryDocuments(collectionUrl, sqlQuery,opt)
+        .toArray((err,results)=>{
+            if(err) return reject(err);
+            resolve(results[0]);
         })
     })
 }

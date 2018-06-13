@@ -24,6 +24,7 @@ exports.typeDefs = `
         statraScore: [StatraScoreResult]
         dataEvents: [DataEvent]
         targetTypes: [TargetType]
+        insights: [Insight]
     }
 
     type StatraScoreResult {
@@ -45,10 +46,14 @@ exports.typeDefs = `
     }
 
     type TargetType {
-        name : String!
+        name : String
         targets: [Target]
     }
 
+    type Insight {
+        contents : String        
+    }
+    
     type DataEventsResult {
         value: Int!
         valueAt: Date
@@ -64,7 +69,7 @@ exports.typeDefs = `
         officePhone: String
         location: String
         targetType: TargetType
-        statraScore: StatraScoreResult
+        statraScoreResults: StatraScoreResult
         kpis: [Kpi]
         dataEvents: [DataEvent]        
         tenant: Tenant
@@ -82,6 +87,7 @@ exports.typeDefs = `
         kpi_value: Int!
         kpi_value_at: String
         updatedAt: Date
+        kpi_target: String
     }
 
     type Query {
