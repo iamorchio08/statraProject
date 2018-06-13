@@ -211,7 +211,8 @@ function processResult(results,kpiDef){
                 doc.kpiName = kpiDef.name;
                 doc.unit = kpiDef.unit;
                 doc.targetType = kpiDef.targetType;
-                doc.documentType = 'results_'+kpiDef.tenant+'_'+kpiDef.nameConcat;                
+                //doc.documentType = 'results_'+kpiDef.tenant+'_'+kpiDef.nameConcat;  anterior forma              
+                doc.documentType = 'results_kpi_'+kpiDef.tenant;
                 doc.updatedAt = updatedAt;        
                 partialArray.push(doc);
                 count++;

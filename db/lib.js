@@ -60,13 +60,13 @@ exports.getKpiByTarget = (targetID)=>{
 }
 
 //incluir filtrado con rango de valores y fecha
-exports.getResultsBykpiRangeValue = (kpiDef,range,date)=>{
-    console.log('fullnametarget',kpiDef.kpi.targetFullname);
+exports.getResultsBykpiRangeValue = (kpiDef,range,date)=>{    
+    kpiDef.kpi.targetFullname = kpiDef.kpi.targetFullname.toLowerCase();
     let nameKpiWithoutSpace = kpiDef.name.replace(/\s/g,"");  
     let docTypeResultKpi = 'results_'+kpiDef.tenant+'_'+nameKpiWithoutSpace;    
     let init = range[0];
     let end = range[1];
-    let sqlQuery = "SELECT top 13 * FROM c where c.documentType = '"+docTypeResultKpi+"' AND c.kpi_target = '"+kpiDef.kpi.targetFullname+"' AND (c.kpi_value BETWEEN "+init+" AND "+end+") AND c.kpi_value_at < '"+date+"' ORDER BY c.updatedAt DESC ";
+    let sqlQuery = "SELECT top 13 * FROM c where c.documentType = '"+docTypeResultKpi+"' AND c.kpi_target = '"+kpiDef.kpi.targetFullname+"' AND (c.kpi_value BETWEEN "+init+" AND "+end+") AND c.kpi_value_at = '"+date+"' ORDER BY c.updatedAt DESC ";
     console.log('sqlquery',sqlQuery);
     return new Promise((resolve,reject)=>{
       client.queryDocuments(collectionUrl,sqlQuery)
@@ -78,8 +78,10 @@ exports.getResultsBykpiRangeValue = (kpiDef,range,date)=>{
 }
 
 exports.getResultsByKpiAndTarget = (kpiDef,targetFullName)=>{
+    targetFullName = targetFullName.toLowerCase();
     let nameKpiWithoutSpace = kpiDef.name.replace(/\s/g,"");
-    let docTypeResultKpi = 'results_'+kpiDef.tenant+'_'+nameKpiWithoutSpace;
+    //let docTypeResultKpi = 'results_'+kpiDef.tenant+'_'+nameKpiWithoutSpace;
+    let docTypeResultKpi = 'results_kpi_'+kpiDef.tenant;
     let sqlQuery = "SELECT top 13 * FROM c where c.documentType = '"+docTypeResultKpi+"' AND c.kpi_target = '"+targetFullName+"' ORDER BY c.kpi_value_at DESC ";
     console.log('query cra',sqlQuery);
     return new Promise((resolve,reject)=>{
@@ -92,9 +94,14 @@ exports.getResultsByKpiAndTarget = (kpiDef,targetFullName)=>{
     })
 }
 
-exports.getKpisByTargetType = ({tenant,targetType,enable})=>{
-    let sqlQuery = "SELECT * from c where c.tenant = '"+tenant+"' AND c.assignTo.targetType = '"+targetType+"' AND c.enable = "+enable+" "; 
-    //console.log('sql query',sqlQuery);
+exports.getKpisByTargetType = ({tenant, targetType, enable, category = '', subcategory = ''})=>{
+    let sqlQuery = "SELECT * from c where c.tenant = '"+tenant+"' AND c.assignTo.targetType = '"+targetType+"' AND c.enable = "+enable+" ";
+    if(category){
+        sqlQuery += "AND c.belongTo.category = '"+category+"' ";
+    }
+    if(subcategory){
+        sqlQuery += "AND ARRAY_CONTAINS(c.belongTo.subCategories, '"+subcategory+"') ";
+    }     
     return new Promise((resolve,reject)=>{
         client.queryDocuments(defColl, sqlQuery)
         .toArray((err,results)=>{
@@ -104,9 +111,13 @@ exports.getKpisByTargetType = ({tenant,targetType,enable})=>{
     })
 }
 
-exports.getTargetTypes = ({tenant})=>{
-    let sqlQuery = 'SELECT DISTINCT c.targetType FROM c where c.documentType = "target"';    
+exports.getTargetTypes = ({tenant,targetType = ''})=>{
+    let sqlQuery = 'SELECT DISTINCT c.targetType FROM c where c.documentType = "target" ';    
+    if(targetType){
+        sqlQuery += 'AND c.targetType = "'+targetType+'" ';
+    }
     let opt = {partitionKey : 'target'}
+    console.log('sql query get targettypes',sqlQuery);
     return new Promise((resolve,reject)=>{
         client.queryDocuments(collectionUrl,sqlQuery,opt)
         .toArray((err,results)=>{
@@ -126,6 +137,17 @@ exports.getTargetById = ({tenant, targetID})=>{
         .toArray((err,results)=>{
             if(err) return reject(err);
             resolve(results[0]);
+        })
+    })
+}
+
+exports.getKpis = (enable = true)=>{
+    let sqlQuery = "SELECT * from c where c.tenant = 'ahf' AND c.enable = "+enable+" ";
+    return new Promise((resolve,reject)=>{
+        client.queryDocuments(defColl,sqlQuery)
+        .toArray((err,results)=>{
+            if(err) return reject(err);
+            resolve(results);
         })
     })
 }

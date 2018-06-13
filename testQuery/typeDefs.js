@@ -69,7 +69,7 @@ exports.typeDefs = `
         officePhone: String
         location: String
         targetType: TargetType
-        statraScoreResults: StatraScoreResult
+        statraScoreResults: [StatraScoreResult]
         kpis: [Kpi]
         dataEvents: [DataEvent]        
         tenant: Tenant
@@ -78,9 +78,37 @@ exports.typeDefs = `
     type Kpi {
         name: String!
         weight: String!        
-        datasources: [String]
+        dataset: [Dataset]
         results: [KpiResult]
         goals : Goal
+        frequency : Frequency
+        description : String
+        belongTo : BelongTo
+        unit : String
+        enable : Boolean
+        createdAt : Date    
+    }
+    
+    type Dataset {
+        name : String
+        datasource : Datasource
+    }
+    
+    type Datasource{
+        name : String!
+        avatar : String
+    }
+    
+    type Frequency{
+        value : Int
+        label : String
+        unit : String
+        valueUnit : Int
+    }
+    
+    type BelongTo{
+        category : String!
+        subCategories : [String]
     }
     
     type KpiResult {
@@ -93,8 +121,8 @@ exports.typeDefs = `
     type Query {
         getTargets(tenant: String!, targetType: String!, kpiName: String!,range: [Int!]!, date: Date): [Target]
         getTarget(tenant: String!, targetID: String!): Target
-        kpis(tenant: String! , targetType : String!, enable: Boolean!): [Kpi]
-        targetTypes(tenant : String!): [TargetType]
+        kpis(tenant: String! , targetType : String, enable: Boolean!, category : String , subcategory : String): [Kpi]
+        targetTypes(tenant : String!, targetType: String): [TargetType]
         getCompany(tenant: String!) : Tenant                        
     }
 `;

@@ -41,20 +41,20 @@ const resolverFunctions = {
     }
   },
   Kpi:{
-    name(obj,args,context,info){
-      console.log('name in KPI',obj);      
+    name(obj,args,context,info){            
       //if(obj.hasOwnProperty('kpi')) return obj.kpi.name
       return 
     },
-    results(obj,args,context,info){
-      console.log('results',obj);
+    results(obj,args,context,info){      
       let fullName = context.firstName+' '+context.lastName;
-      if(context.args.hasOwnProperty('range') && context.args.hasOwnProperty('kpiName')){
-        console.log('vengo por range');
+      if(context.args.hasOwnProperty('range') && context.args.hasOwnProperty('kpiName')){        
         //dado un kpi , obtener los resultados en base al documentType results_tenant_kpiname , range y date
         return db.getResultsBykpiRangeValue(obj,context.args.range,context.args.date)
       }        
       return db.getResultsByKpiAndTarget(obj,fullName);
+    },
+    belongTo(obj,args,context,info){
+      
     }
   },
   TargetType:{    
@@ -65,12 +65,7 @@ const resolverFunctions = {
   },
   KpiResult:{
     kpi_value(obj,args,context,info){
-      console.log('kpi value',obj.kpi_value);
-      /*
-      if(context.hasOwnProperty('isTarget')){
-        console.log('obj en kpi results',obj);
-        return obj.filter(data => data.kpi_target == context.firstName+' '+context.lastName)
-      } */     
+      console.log('kpi value',obj.kpi_value);      
     }
   }
 }

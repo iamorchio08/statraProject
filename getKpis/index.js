@@ -1,4 +1,6 @@
 var mockKpis = require('./api/mockkpis');
+var db = require('../db/lib');
+
 module.exports = function (context, req) {
     context.log('JavaScript HTTP trigger function processed a request.');
     // could receive category filters
@@ -7,7 +9,22 @@ module.exports = function (context, req) {
         var res = getKpis();    
         return context.done(null,{res:res});
     }
-    context.done();
+    else{
+        db.getKpis()
+        .then(response=>{
+            context.res = {
+                body : response
+            };
+            return context.done()
+        })
+        .catch(err=>{
+            context.res ={
+                body : err,
+                status: 400
+            }
+            return context.done();
+        })        
+    }    
 };
 
 const getKpis = ()=>{
