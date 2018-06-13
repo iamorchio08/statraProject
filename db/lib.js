@@ -82,6 +82,7 @@ exports.getResultsByKpiAndTarget = (kpiDef,targetFullName)=>{
     let nameKpiWithoutSpace = kpiDef.name.replace(/\s/g,"");
     //let docTypeResultKpi = 'results_'+kpiDef.tenant+'_'+nameKpiWithoutSpace;
     let docTypeResultKpi = 'results_kpi_'+kpiDef.tenant;
+    console.log('doctyperesultskpi',docTypeResultKpi);
     let sqlQuery = "SELECT top 13 * FROM c where c.documentType = '"+docTypeResultKpi+"' AND c.kpi_target = '"+targetFullName+"' ORDER BY c.kpi_value_at DESC ";
     console.log('query cra',sqlQuery);
     return new Promise((resolve,reject)=>{
