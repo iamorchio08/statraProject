@@ -20,7 +20,7 @@ const collectionUrl = `${dbUrl}/colls/AHF`;
 const defColl = `${dbUrl}/colls/definitions`;
 
 exports.getTargetByTargetType = ({tenant, targetType, kpiName, date})=>{        
-    let sqlQuery = "SELECT top 10 * FROM c where c.targetType = '"+targetType+"' AND c.documentType = 'target' ";
+    let sqlQuery = "SELECT top 10 * FROM c where c.targetType = '"+targetType+"' AND c.documentType = 'target' ORDER BY c.firstName ";
     return new Promise((resolve,reject)=>{
         client.queryDocuments(collectionUrl,sqlQuery)
         .toArray((err,results)=>{          
@@ -121,8 +121,7 @@ exports.getTargetTypes = ({tenant,targetType = ''})=>{
     console.log('sql query get targettypes',sqlQuery);
     return new Promise((resolve,reject)=>{
         client.queryDocuments(collectionUrl,sqlQuery,opt)
-        .toArray((err,results)=>{
-            console.log('ress',results);
+        .toArray((err,results)=>{            
             if(err) return reject(err);
             resolve(results)
         })
@@ -151,4 +150,18 @@ exports.getKpis = (enable = true)=>{
             resolve(results);
         })
     })
+}
+
+exports.getTargetsByTargetType = (targetType)=>{
+    let sqlQuery = "SELECT TOP 10 * from c where c.documentType = 'target' and c.targetType = '"+targetType+"' ";
+    let opt = { partitionKey : 'target'};
+    return new Promise((resolve,reject)=>{
+        client.queryDocuments(collectionUrl, sqlQuery, opt)
+        .toArray((err,results)=>{
+            console.log('err',err);
+            if(err) return reject(err);
+            resolve(results);
+        })
+    })
+    
 }

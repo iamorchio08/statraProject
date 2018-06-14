@@ -58,10 +58,12 @@ const resolverFunctions = {
     }
   },
   TargetType:{    
-    name(obj,args,context,info){
-      console.log('name field',obj);
-      return obj.targetType;
+    name({targetType},args,context,info){      
+      return targetType;
     },
+    targets({targetType},args,context,info){      
+      return db.getTargetsByTargetType(targetType);
+    }
   },
   KpiResult:{
     kpi_value(obj,args,context,info){
