@@ -20,7 +20,7 @@ const collectionUrl = `${dbUrl}/colls/AHF`;
 const defColl = `${dbUrl}/colls/definitions`;
 
 exports.getTargetByTargetType = ({tenant, targetType, kpiName, date})=>{        
-    let sqlQuery = "SELECT top 10 * FROM c where c.targetType = '"+targetType+"' AND c.documentType = 'target' ORDER BY c.firstName ";
+    let sqlQuery = "SELECT * FROM c where c.targetType = '"+targetType+"' AND c.documentType = 'target' ORDER BY c.lastName ASC ";
     return new Promise((resolve,reject)=>{
         client.queryDocuments(collectionUrl,sqlQuery)
         .toArray((err,results)=>{          
@@ -35,11 +35,12 @@ exports.getTargetByTargetType = ({tenant, targetType, kpiName, date})=>{
 exports.getKpiByTargetAndKpiname = (target,kpiName)=>{
     //let sqlQuery = "SELECT * FROM c where c.name = '"+kpiName+"' AND ARRAY_CONTAINS(c.assignTo.targets,{'targetID' : '"+target.id+"'}) AND c.enable = true";    
     let targetFullName = target.firstName.trim()+' '+target.lastName.trim();
-    let sqlQuery = "SELECT {'targetFullname': '"+targetFullName+"', 'name': c.name } as kpi, c.name, c.tenant from c where c.name = '"+kpiName+"' AND ARRAY_CONTAINS(c.assignTo.targets,{'targetID' : '"+target.id+"'}) AND c.enable = true";
-    console.log('sqlquerykpi',sqlQuery);
+    let sqlQuery = 'SELECT {"targetFullname": "'+targetFullName+'", "name": c.name } as kpi, c.name, c.tenant from c where c.name = "'+kpiName+'" AND ARRAY_CONTAINS(c.assignTo.targets,{"targetID" : "'+target.id+'"}) AND c.enable = true';
+    //console.log('sqlquerykpi',sqlQuery);
     return new Promise((resolve,reject)=>{
         client.queryDocuments(defColl,sqlQuery)
-        .toArray((err,results)=>{            
+        .toArray((err,results)=>{
+            console.log('err',err);
             if(err) return reject(err)
             resolve(results)
         })
@@ -153,7 +154,7 @@ exports.getKpis = (enable = true)=>{
 }
 
 exports.getTargetsByTargetType = (targetType)=>{
-    let sqlQuery = "SELECT TOP 10 * from c where c.documentType = 'target' and c.targetType = '"+targetType+"' ";
+    let sqlQuery = "SELECT * from c where c.documentType = 'target' and c.targetType = '"+targetType+"' ";
     let opt = { partitionKey : 'target'};
     return new Promise((resolve,reject)=>{
         client.queryDocuments(collectionUrl, sqlQuery, opt)

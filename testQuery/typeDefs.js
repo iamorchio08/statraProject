@@ -73,6 +73,7 @@ exports.typeDefs = `
         kpis: [Kpi]
         dataEvents: [DataEvent]        
         tenant: Tenant
+        cursor : String
     }
 
     type Kpi {
@@ -118,8 +119,14 @@ exports.typeDefs = `
         kpi_target: String
     }
 
+    type TargetResult {
+        targets(prevCursor: String, nextCursor : String) : [Target]
+        nextCursor : String        
+        prevCursor : String
+    }
+
     type Query {
-        getTargets(tenant: String!, targetType: String!, kpiName: String!,range: [Int!]!, date: Date): [Target]
+        getTargets(tenant: String!, targetType: String!, kpiName: String!,range: [Int!]!, date: Date): TargetResult
         getTarget(tenant: String!, targetID: String!): Target
         kpis(tenant: String! , targetType : String, enable: Boolean!, category : String , subcategory : String): [Kpi]
         targetTypes(tenant : String!, targetType: String): [TargetType]

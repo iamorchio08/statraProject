@@ -2,13 +2,13 @@ const { graphqlAzureFunctions } = require('apollo-server-azure-functions');
 const { makeExecutableSchema, addMockFunctionsToSchema } = require('graphql-tools');
 const {typeDefs, myCustomScalarType } = require('./typeDefs');
 var db = require('../db/lib');
-
+const limit = 500;
 const resolverFunctions = {
   Date : myCustomScalarType,
   Query : {
     getTargets(obj, args, context, info) {
       context.args = args; //to access in sub-resolvers
-      context.args.date = new Date().toISOString();      
+      context.args.date = new Date().toISOString();            
       return db.getTargetByTargetType(args)
     },
     kpis(obj, args, context, info){
@@ -33,11 +33,11 @@ const resolverFunctions = {
       return db.getKpiByTarget(context.args.targetID);
       
     },
-    firstName(obj,args,context,info){
-      context.firstName = obj.firstName.trim();            
+    firstName({results},args,context,info){      
+      //context.firstName = obj.firstName.trim();            
     },
     lastName(obj,args,context,info){      
-      context.lastName = obj.lastName.trim();
+      //context.lastName = obj.lastName.trim();
     }
   },
   Kpi:{
@@ -68,6 +68,54 @@ const resolverFunctions = {
   KpiResult:{
     kpi_value(obj,args,context,info){
       console.log('kpi value',obj.kpi_value);      
+    }
+  },
+  TargetResult:{
+    targets(results,args,context,info){      
+      if(args.hasOwnProperty('nextCursor')){        
+        context.prevCursor = results[results.findIndex(data=> data.id == args.nextCursor)- limit+1].id;
+        var cursor = args.nextCursor        
+        var index = results.findIndex(data => data.id == cursor)+1;
+      }
+      else if(args.hasOwnProperty('prevCursor')){
+        context.nextCursor = results[results.findIndex(data=> data.id == args.prevCursor)+ limit-1 ].id;
+        context.prevCursor = ( typeof results[results.findIndex(data=> data.id == args.prevCursor)- limit+1 ] == 'undefined')? '0' : results[results.findIndex(data=> data.id == args.prevCursor)- limit+1 ].id;
+        var cursor = args.prevCursor;      
+        var index = results.findIndex(data => data.id == cursor);          
+      }
+      else{ // no recibo cursor ,son los primeros resultados
+        cursor = results[limit].id;
+        context.prevCursor = '0';
+        var index = 0;
+      }
+    
+      console.log('index cursor',index);
+      if(context.prevCursor == '0' && index > 0){
+        var obj = {
+          results : results.slice(0,index)
+        }
+      }
+      else{
+        var obj = {
+          results : results.slice(index, index + limit)      
+        }
+      }
+      
+
+      if(obj.results.length){
+        if(args.hasOwnProperty('nextCursor') || Object.keys(args).length == 0){
+          context.nextCursor = obj.results[obj.results.length-1].id; //next cursor
+        }
+        return obj.results        
+      }
+      context.nextCursor = '0';
+      return [];      
+    },
+    prevCursor(obj,args,context,info){
+      return context.prevCursor;
+    },
+    nextCursor(obj,args,context,info){
+      return context.nextCursor;
     }
   }
 }
@@ -118,4 +166,24 @@ module.exports = function (context, req) {
     graphqlAzureFunctions({ schema })(context, req);            
 };
 
-
+/*
+if(!args.hasOwnProperty('cursor')){
+  console.log('not presnet',limit, 'results llength',results.length);
+  if(limit <= results.length){
+    
+    cursor = results[limit].id
+    index = 0;
+    console.log('cursor ahora es ',cursor);
+  }
+}
+else{
+  cursor = args.cursor;
+  var index = results.findIndex(data => data.id == cursor);
+}
+let obj = {
+  results : results.slice(index, index + limit),
+  cursor : cursor
+}
+console.log('obj with cursor', obj);
+return obj;
+*/
