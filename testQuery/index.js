@@ -71,7 +71,8 @@ const resolverFunctions = {
     }
   },
   TargetResult:{
-    targets(results,args,context,info){      
+    targets(results,args,context,info){
+      if(!results.length) return [];     
       if(args.hasOwnProperty('nextCursor')){        
         context.prevCursor = results[results.findIndex(data=> data.id == args.nextCursor)- limit+1].id;
         var cursor = args.nextCursor        
@@ -79,16 +80,15 @@ const resolverFunctions = {
       }
       else if(args.hasOwnProperty('prevCursor')){
         context.nextCursor = results[results.findIndex(data=> data.id == args.prevCursor)+ limit-1 ].id;
-        context.prevCursor = ( typeof results[results.findIndex(data=> data.id == args.prevCursor)- limit+1 ] == 'undefined')? '0' : results[results.findIndex(data=> data.id == args.prevCursor)- limit+1 ].id;
+        context.prevCursor = ( typeof results[results.findIndex(data=> data.id == args.prevCursor)- limit ] == 'undefined')? '0' : results[results.findIndex(data=> data.id == args.prevCursor)- limit ].id;
         var cursor = args.prevCursor;      
         var index = results.findIndex(data => data.id == cursor);          
-      }
+      }      
       else{ // no recibo cursor ,son los primeros resultados
-        cursor = results[limit].id;
+        cursor = results[results.length-1].id;
         context.prevCursor = '0';
         var index = 0;
       }
-    
       console.log('index cursor',index);
       if(context.prevCursor == '0' && index > 0){
         var obj = {

@@ -19,13 +19,17 @@ const dbUrl = 'dbs/statra-db';
 const collectionUrl = `${dbUrl}/colls/AHF`;
 const defColl = `${dbUrl}/colls/definitions`;
 
-exports.getTargetByTargetType = ({tenant, targetType, kpiName, date})=>{        
-    let sqlQuery = "SELECT * FROM c where c.targetType = '"+targetType+"' AND c.documentType = 'target' ORDER BY c.lastName ASC ";
+exports.getTargetByTargetType = ({tenant, targetType, kpiName, date,filter})=>{
+    if(filter)
+        var sqlQuery = "SELECT * FROM c where c.targetType = '"+targetType+"' AND c.documentType = 'target' AND (CONTAINS(concat(LOWER(c.firstName),' ', LOWER(c.lastName)), '"+filter+"') OR CONTAINS(LOWER(c.location), '"+filter+"') ) ORDER BY c.lastName ASC ";          
+    else
+        var sqlQuery = "SELECT * FROM c where c.targetType = '"+targetType+"' AND c.documentType = 'target' ORDER BY c.lastName ASC ";
+            
+    let opt = {partitionKey : 'target'}
     return new Promise((resolve,reject)=>{
-        client.queryDocuments(collectionUrl,sqlQuery)
+        client.queryDocuments(collectionUrl,sqlQuery,opt)
         .toArray((err,results)=>{          
-            if(err) return reject(err)
-            //var results = results.map(data => {data.kpiName = kpiName; return data })
+            if(err) return reject(err)        
             resolve(results);
         })
     })

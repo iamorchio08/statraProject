@@ -126,7 +126,7 @@ exports.typeDefs = `
     }
 
     type Query {
-        getTargets(tenant: String!, targetType: String!, kpiName: String!,range: [Int!]!, date: Date): TargetResult
+        getTargets(tenant: String!, targetType: String!, kpiName: String!,range: [Int!]!, date: Date, filter : String): TargetResult
         getTarget(tenant: String!, targetID: String!): Target
         kpis(tenant: String! , targetType : String, enable: Boolean!, category : String , subcategory : String): [Kpi]
         targetTypes(tenant : String!, targetType: String): [TargetType]
