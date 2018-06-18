@@ -166,3 +166,18 @@ exports.getTargetsByTargetType = (targetType)=>{
     })
     
 }
+
+exports.validateQuery = (sqlQuery)=>{
+    
+    return new Promise((resolve,reject)=>{
+        let opt = {populateQueryMetrics : true};
+
+       client.queryDocuments(collectionUrl,sqlQuery,opt)
+       .toArray((err,results)=>{
+           if(err) return reject(err)
+           resolve(true)
+       })
+        
+        
+    })
+}

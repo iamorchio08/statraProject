@@ -2,7 +2,7 @@ const { graphqlAzureFunctions } = require('apollo-server-azure-functions');
 const { makeExecutableSchema, addMockFunctionsToSchema } = require('graphql-tools');
 const {typeDefs, myCustomScalarType } = require('./typeDefs');
 var db = require('../db/lib');
-const limit = 500;
+const limit = 10;
 const resolverFunctions = {
   Date : myCustomScalarType,
   Query : {
