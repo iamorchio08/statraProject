@@ -72,9 +72,10 @@ const resolverFunctions = {
   },
   TargetResult:{
     targets(results,args,context,info){
+      console.log('results length,',results.length)
       if(!results.length) return [];     
       if(args.hasOwnProperty('nextCursor')){        
-        context.prevCursor = results[results.findIndex(data=> data.id == args.nextCursor)- limit+1].id;
+        context.prevCursor = results[results.findIndex(data=> data.id == args.nextCursor)- limit+1].id;        
         var cursor = args.nextCursor        
         var index = results.findIndex(data => data.id == cursor)+1;
       }
@@ -103,8 +104,14 @@ const resolverFunctions = {
       
 
       if(obj.results.length){
-        if(args.hasOwnProperty('nextCursor') || Object.keys(args).length == 0){
-          context.nextCursor = obj.results[obj.results.length-1].id; //next cursor
+        if(args.hasOwnProperty('nextCursor') || Object.keys(args).length == 0){          
+          //context.nextCursor = obj.results[obj.results.length-1].id; //next cursor
+          //si hay un elemento màs despues del ultimo elemento de obj.results , calculo nextcursor
+          var lastId = obj.results[obj.results.length-1].id; //lastId
+          var nextId = results.findIndex(data => data.id == lastId) +1;
+          if(typeof results[nextId] == 'undefined') context.nextCursor = '0';
+          else
+            context.nextCursor = obj.results[obj.results.length-1].id          
         }
         return obj.results        
       }
