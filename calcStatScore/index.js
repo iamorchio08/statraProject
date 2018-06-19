@@ -4,55 +4,23 @@ var db = require('../db/lib');
 const dbUrl = 'dbs/statra-db';
 const ahfCollection = `${dbUrl}/colls/AHF`;
 module.exports = function (context, req) {
-    context.log('JavaScript HTTP trigger function processed a request.');
-    //obtener documento statra score    
-    //ejecutar su formula
-    //armar los resultados
-    //insertar resultados
-    getStatraScore()
-    .then((response)=> {return calcStatScore(response)})
-    .then((response)=>{
-        console.log('response from calcStatScore',response);
-        return processResults(response);
-        //context.res = {body : {data : response.results.slice(0,10), msg : "statScoreRes"}}
-        
-    })
-    .then(response=>{
-        console.log('response from process results splited array',response.length);
-        //context.res = {body : {data : response[0][0]}}
-        //context.done();
-        return saveResults(response);
-    })
-    .then(response=>{
-        console.log('yatamoooo');
+    context.log('JavaScript HTTP trigger function processed a request.');    
+    db.getStatraScore()
+    .then((response)=> { return calcStatScore(response) })
+    .then((response)=>{ return processResults(response) })
+    .then(response=>{ return saveResults(response) })
+    .then(response=>{        
         var data = {msg : 'StatScore calculated' }
         context.res = {body : data};
         context.done();
     })
     .catch(err=>{
-        console.log('err',err);
+        context.log('err',err);
         var data = {error : err};
         context.res = {body : data, status: 400};
         context.done();
-    })
-
-    
+    });
 };
-
-function getStatraScore(){
-    //return new Promise((resolve,reject)=>{
-        return db.getStatraScore()
-        /*
-        .then(response=>{
-            console.log('response',response);
-            resolve(response)
-        })
-        .catch(err=>{
-            reject(err)
-        })
-        */
-    //})    
-}
 
 function calcStatScore(statScoreDef){    
     var memo,sprocLink,opts;
@@ -122,7 +90,7 @@ function processResults({results,statScoreDef}){
             obj_result.recipient = {"targetFullName" : data.kpi_target};
             obj_result.valueAt = data.kpi_value_at;        
             obj_result.value = ( (obj_result["avg_rate_25%"] * avg_obj["avg_rate_25%"]) + (obj_result["avg_rate_50%"] * avg_obj["avg_rate_50%"]) + (obj_result["avg_rate_75%"] * avg_obj["avg_rate_75%"]) + (obj_result["avg_rate_100%"] * avg_obj["avg_rate_100%"]) )            
-            obj_result.documentType = 'results2_statscore_'+statScoreDef.tenant;
+            obj_result.documentType = 'results_statscore_'+statScoreDef.tenant;
             partialArray.push(obj_result);
             count++;
             if(count == 1000){
@@ -137,17 +105,6 @@ function processResults({results,statScoreDef}){
         }
         resolve(splitedArray)
     })    
-}
-
-function getAvgProperty(data){
-    let res = {};
-    for(prop in data){
-        if(prop.includes('avg_rate') && data[prop] > 0){
-            res.rightProp = prop;
-            res.value = data[prop] * avg_obj[prop];
-            return res;
-        }
-    }
 }
 
 function saveResults(arrayDocs){
@@ -190,48 +147,3 @@ function saveResults(arrayDocs){
         }
     })
 }
-
-/**
- //receive an array of batch documents to insert with store procedure
-//grouped by 
-function batchInsert(arrayDocs){
-    var count = 0;
-    var sprocBulkInsert = ahfCollection + '/sprocs/bulkInsert';
-    var partitionKeyValue = arrayDocs[0][0].documentType    
-    var opts = {partitionKey : partitionKeyValue};
-    return new Promise((resolve,reject)=>{
-        insertDocs(arrayDocs[count])
-
-        function insertDocs(docs){
-            var objDocs = {data : docs};
-            console.log('inserting ..', docs.length, ' docss')            
-            client.executeStoredProcedure(sprocBulkInsert, objDocs,opts, checkInsert) //(err,results)=>{                
-        }
-
-        function checkInsert(err,response,headers){
-            if(err && err.code === 429 && headers['x-ms-retry-after-ms']){
-                console.log("Retrying after " + headers['x-ms-retry-after-ms']);
-                setTimeout(function() {
-                    insertDocs(arrayDocs[count]);
-                }, headers['x-ms-retry-after-ms']);
-            }
-            else if(err){                
-                console.log('headers err',headers);                    
-                return reject(err)
-            }
-            else{
-                console.log('docs inserted');            
-                count++;
-                if(count < arrayDocs.length){
-                    insertDocs(arrayDocs[count])
-                }
-                else{
-                    resolve(count) // deberia retornar la cantidad total acumulada
-                }
-            }   
-                
-                        
-        }
-    })
-}
- */
