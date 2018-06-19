@@ -15,6 +15,7 @@ const client = new DocumentClient(host,
         RetryOptions: {}
     }
 );
+exports.client = client;
 const dbUrl = 'dbs/statra-db';
 const collectionUrl = `${dbUrl}/colls/AHF`;
 const defColl = `${dbUrl}/colls/definitions`;
@@ -171,17 +172,25 @@ exports.getTargetsByTargetType = (targetType)=>{
     
 }
 
-exports.validateQuery = (sqlQuery)=>{
-    
+exports.validateQuery = (sqlQuery)=>{    
     return new Promise((resolve,reject)=>{
         let opt = {populateQueryMetrics : true};
-
        client.queryDocuments(collectionUrl,sqlQuery,opt)
        .toArray((err,results)=>{
            if(err) return reject(err)
            resolve(true)
-       })
+       })                
+    })
+}
+
+exports.getStatraScore = ()=>{ //retrieve the statrascore document from definitions coll
+    var sqlQuery = 'SELECT * FROM c WHERE c.documentType = "statscore" ';
+    return new Promise((resolve,reject)=>{
         
-        
+        client.queryDocuments(defColl,sqlQuery).toArray((err,results)=>{
+            if(err) return reject(err)
+
+            resolve(results[0]);
+        })
     })
 }

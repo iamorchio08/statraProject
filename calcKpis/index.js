@@ -115,7 +115,7 @@ function getCollection(){
 
 function getKpisByDataset(dataset){
     
-    var sqlQuery = "SELECT k.name,k.formula, k.unit, k.assignTo.targetType, k.tenant, REPLACE(k.name,' ','') as nameConcat";
+    var sqlQuery = "SELECT k.name,k.formula, k.unit, k.assignTo.targetType, k.tenant, REPLACE(k.name,' ','') as nameConcat, k.goals, k.weight";
       sqlQuery +=  " FROM kpis as k";
       sqlQuery += " JOIN datasets IN k.datasets";
       sqlQuery += " WHERE k.documentType = 'kpi' AND datasets IN ('"+dataset+"') AND k.enable = true ";
@@ -145,7 +145,7 @@ function calcKpis(kpis,dataset){
 function calcKpi(kpiDef,dataset){
     //get kpi's formula sql , metrics and dimensions
     console.log('calcKpi',kpiDef.name);
-    var filterQuery,dimensions,metris,cubeConfig,memo,sprocLink,sprocLink,dataRes;
+    var filterQuery,dimensions,metrics,cubeConfig,memo,sprocLink,sprocLink,dataRes;
     dataRes = [];
     sprocLink = ahfCollection + '/sprocs/cube';    
     filterQuery = kpiDef.formula.queryFilter;
@@ -210,10 +210,14 @@ function processResult(results,kpiDef){
                 delete doc._count;                                
                 doc.kpiName = kpiDef.name;
                 doc.unit = kpiDef.unit;
-                doc.targetType = kpiDef.targetType;
-                //doc.documentType = 'results_'+kpiDef.tenant+'_'+kpiDef.nameConcat;  anterior forma              
+                doc.targetType = kpiDef.targetType;                
                 doc.documentType = 'results_kpi_'+kpiDef.tenant;
-                doc.updatedAt = updatedAt;        
+                doc.updatedAt = updatedAt;
+                doc.weight = kpiDef.weight;        
+                doc.valueTarget = kpiDef.goals.value[2];
+                doc.recipient = {"targetFullName" : doc.kpi_target};
+                doc.valueRate = ((100 * doc.kpi_value) / kpiDef.goals.max);
+                doc['rate_'+kpiDef.weight] = doc.valueRate;                                
                 partialArray.push(doc);
                 count++;
             }
