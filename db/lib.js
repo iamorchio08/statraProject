@@ -194,3 +194,15 @@ exports.getStatraScore = ()=>{ //retrieve the statrascore document from definiti
         })
     })
 }
+
+exports.getStatScoreByTarget = (target)=>{
+    var targetFullName = (target.firstName+' '+target.lastName).toLowerCase();
+    var sqlQuery = 'SELECT * FROM c WHERE c.documentType = "results_statscore_AHF" AND LOWER(c.recipient.targetFullName) = "'+targetFullName+'" '; 
+    return new Promise((resolve,reject)=>{
+        client.queryDocuments(collectionUrl,sqlQuery).toArray((err,results)=>{
+            if(err) return reject(err);
+
+            resolve(results);
+        })
+    })
+}

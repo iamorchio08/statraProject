@@ -38,6 +38,9 @@ const resolverFunctions = {
     },
     lastName(obj,args,context,info){      
       //context.lastName = obj.lastName.trim();
+    },
+    statraScoreResults(obj,args,context,info){
+      return db.getStatScoreByTarget(obj);
     }
   },
   Kpi:{

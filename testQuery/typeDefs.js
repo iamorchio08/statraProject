@@ -28,8 +28,8 @@ exports.typeDefs = `
     }
 
     type StatraScoreResult {
-        statValue : Int
-        statValueAt : Date
+        value : Float
+        valueAt : String
     }
 
     type DataEvent {
