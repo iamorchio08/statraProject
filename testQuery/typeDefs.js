@@ -2,7 +2,8 @@ const { GraphQLScalarType }  = require('graphql');
 exports.myCustomScalarType = new GraphQLScalarType({
     name: 'Date',
     description: 'Description of my custom scalar type Date',
-    serialize(value) {                
+    serialize(value) {  
+        console.log('date')              ;
         return value.toISOString()
     },
     parseValue(value) {                
@@ -69,7 +70,7 @@ exports.typeDefs = `
         officePhone: String
         location: String
         targetType: TargetType
-        statraScoreResults: [StatraScoreResult]
+        statraScoreResults(dateFrom : String, dateTo : String): [StatraScoreResult]
         kpis: [Kpi]
         dataEvents: [DataEvent]        
         tenant: Tenant
@@ -80,7 +81,7 @@ exports.typeDefs = `
         name: String!
         weight: String!        
         dataset: [Dataset]
-        results: [KpiResult]
+        results(dateFrom : String, dateTo: String): [KpiResult]
         goals : Goal
         frequency : Frequency
         description : String
@@ -117,6 +118,7 @@ exports.typeDefs = `
         kpi_value_at: String
         updatedAt: Date
         kpi_target: String
+        valueRate : Float
     }
 
     type TargetResult {
@@ -126,7 +128,7 @@ exports.typeDefs = `
     }
 
     type Query {
-        getTargets(tenant: String!, targetType: String!, kpiName: String!,range: [Int!]!, date: Date, filter : String): TargetResult
+        getTargets(tenant: String!, targetType: String!, kpiName: String!,range: [Int!]!, date: String!, filter : String): TargetResult
         getTarget(tenant: String!, targetID: String!): Target
         kpis(tenant: String! , targetType : String, enable: Boolean!, category : String , subcategory : String): [Kpi]
         targetTypes(tenant : String!, targetType: String): [TargetType]
