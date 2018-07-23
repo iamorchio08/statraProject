@@ -18,11 +18,11 @@ client = new DocumentClient(host, {masterKey: masterKey},
 OLAPCube = require('lumenize').OLAPCube;
 const dbUrl = 'dbs/statra-db';
 const kpisCollection = `${dbUrl}/colls/definitions`;
-const ahfCollection = `${dbUrl}/colls/AHF`;
+const ahfCollection = `${dbUrl}/colls/ahf`;
 const testCollection = `${dbUrl}/colls/ahf`;
 module.exports = function (context, req) {
     //return testRes();
-    
+    var dateStart = new Date();
     context.log('http started',req.query);            
     if(req.query && req.query.dataset){        
         let dataset = req.query.dataset;       
@@ -47,6 +47,7 @@ module.exports = function (context, req) {
         })
         .then(response=>{
             //console.log('response from process results',response[0].length);
+            console.log('kpi calculared from',dateStart, 'and end ', new Date());
             context.res = {body :{data: response, msg:'Kpi calculated' }};
             context.done();
         })    
@@ -141,6 +142,41 @@ function calcKpis(kpis,dataset){
     var promises = kpis.map(kpi => calcKpi(kpi,dataset));
     return Promise.all(promises)      
 }
+function _calcKpi(kpiDef,dataset){
+    //var query = "select Lower(REPLACE(c.LastModifiedBy, '.', ' ')) as kpi_target , CONCAT(SUBSTRING(c.LastModified,0,13),':59') as kpi_value_at, c.PId from c where c.documentType = 'dataset_appt_completed' ";    
+    var query = "select Lower(REPLACE(c.LastModifiedBy, '.', ' ')) as kpi_target , CONCAT(SUBSTRING(c.LastModified,0,13),':59') as kpi_value_at, c.PId from c where c.documentType = 'dataset_appt_completed' ";    
+    console.log('query',query);
+    var opt = {partitionKey : dataset};
+    return new Promise((resolve,reject)=>{
+        console.log('start ! !', new Date())
+        testQuery(ahfCollection,query,opt);
+        function testQuery(ahfCollection,query,opt){
+            
+            var res = client.queryDocuments(ahfCollection,query,opt);
+            if(res.hasMoreResults()){
+                console.log('hay results', new Date());
+
+            }            
+            res.toArray(checkContinuation)
+            
+        }
+        function checkContinuation(err,results,headers){
+            console.log('header',headers);
+            if(err && err.code === 429 && headers['x-ms-retry-after-ms']){
+                console.log("Retrying after " + headers['x-ms-retry-after-ms']);
+                setTimeout(function() {                    
+                    testQuery(ahfCollection,query,opt);
+                }, headers['x-ms-retry-after-ms']);
+            }
+            else{
+                console.log('results',results.length);
+                console.log('end ', new Date())    ;
+                resolve(results);
+            }
+        }                  
+        
+    })
+}
 
 function calcKpi(kpiDef,dataset){
     //get kpi's formula sql , metrics and dimensions
@@ -154,7 +190,7 @@ function calcKpi(kpiDef,dataset){
     cubeConfig = {dimensions,metrics};    
     cubeConfig.keepTotals = false;                    
     memo = {cubeConfig : cubeConfig,filterQuery: filterQuery};            
-    let opts = {partitionKey : dataset};
+    let opts = {partitionKey : dataset, requestContinuation: true, maxItemCount : -1};
     return new Promise((resolve,reject)=>{
         execUntilNotContinuation(sprocLink,memo);
         //execute formula
@@ -166,8 +202,11 @@ function calcKpi(kpiDef,dataset){
 
         //validate if exists continuation token to retrieve more results
         function checkContinuation(err,response,headers){
+            
             if(err && err.code === 429 && headers['x-ms-retry-after-ms']){
                 console.log("Retrying after " + headers['x-ms-retry-after-ms']);
+                console.log('continuation ???',Object.keys(headers));
+                console.log('charge',headers['x-ms-request-charge'])
                 setTimeout(function() {                    
                     execUntilNotContinuation(sprocLink,memo);
                 }, headers['x-ms-retry-after-ms']);
@@ -182,9 +221,9 @@ function calcKpi(kpiDef,dataset){
                 }
                 else{ //continuation end                                         
                     cube = OLAPCube.newFromSavedState( response.savedCube);
-                    dataRes = dataRes.concat(cube.cells);
+                    //dataRes = dataRes.concat(cube.cells);
                     console.log('end continuation',cube.cells);
-                    var res = {results : dataRes, kpiDef : kpiDef}
+                    var res = {results : cube.cells, kpiDef : kpiDef}
                     resolve(res); 
                 }                                
             }                                                                    

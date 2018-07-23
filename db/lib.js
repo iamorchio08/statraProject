@@ -1,4 +1,4 @@
-const DocumentClient = require('documentdb').DocumentClient;
+/* const DocumentClient = require('documentdb').DocumentClient;
 const host = "https://localhost:8081";                    
 const masterKey = "C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw=="; 
 const client = new DocumentClient(host, 
@@ -14,7 +14,24 @@ const client = new DocumentClient(host,
         PreferredLocations : [],
         RetryOptions: {}
     }
-);
+); */
+var mongoClient = require('mongodb').MongoClient;
+var client;
+exports.connectDB = ()=>{
+    if(client == null){
+        mongoClient.connect(uri,{useNewUrlParser: true},(err,client_)=>{
+            if(err){
+              console.log('err',err);
+              return reject(err);
+            } 
+            client = client_.db('statrascore_demo');
+            resolve(client)
+                    
+        })
+    }
+    resolve(client);
+    
+}
 exports.client = client;
 const dbUrl = 'dbs/statra-db';
 const collectionUrl = `${dbUrl}/colls/AHF`;

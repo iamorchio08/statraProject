@@ -1,22 +1,21 @@
-var db = require('../db/lib');
+var db = require('../db/libMongo');
 
-module.exports = function (context, req) {
-    context.log('JavaScript HTTP trigger function processed a request.');
-
-    if (req.query.formula ) { //recibo query
-        let sqlQuery = req.query.formula;
-        db.validateQuery(sqlQuery)
-        .then(response=>{
+module.exports = function (context, req) {    
+    var query,collName;        
+    if ((req.body.query && typeof req.body.query == 'object') && (req.body.collName && typeof req.body.collName == 'string') ){ //recibo query
+                
+        collName = req.body.collName; 
+        query = req.body.query;       
+        validateQuery(query,collName)
+        .then(response=>{            
             context.res = {
-                body : 'Query validated'
+                body : response
             }            
             context.done();
         })
-        .catch(err=>{
-            console.log('err test' , err['body']);
-
+        .catch(err=>{            
             context.res = {
-                body : err['body'],
+                body : err,
                 status : err.code
             }
             context.done();
@@ -31,3 +30,11 @@ module.exports = function (context, req) {
     }
     
 };
+
+function validateQuery(query,collName){
+   return db.connectDB()
+    .then(()=> db.validateQuery(query,collName))
+    .catch(err=>{
+        return Promise.reject(err)
+    })
+}

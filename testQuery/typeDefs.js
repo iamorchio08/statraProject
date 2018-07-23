@@ -63,12 +63,12 @@ exports.typeDefs = `
 
     type Target {
         id: String
-        firstName: String
-        lastName: String
-        jobTitle: String
-        homeDepartment: String
+        FirstName: String
+        LastName: String
+        JobTitle: String
+        HomeDep: String
         officePhone: String
-        location: String
+        Location: String
         targetType: TargetType
         statraScoreResults(dateFrom : String, dateTo : String): [StatraScoreResult]
         kpis: [Kpi]
@@ -127,11 +127,17 @@ exports.typeDefs = `
         prevCursor : String
     }
 
+    type Category{
+        name : String,
+        subCategories : [String]
+    }
+
     type Query {
         getTargets(tenant: String!, targetType: String!, kpiName: String!,range: [Int!]!, date: String!, filter : String): TargetResult
         getTarget(tenant: String!, targetID: String!): Target
         kpis(tenant: String! , targetType : String, enable: Boolean!, category : String , subcategory : String): [Kpi]
         targetTypes(tenant : String!, targetType: String): [TargetType]
         getCompany(tenant: String!) : Tenant                        
+        getCategories: [Category]
     }
 `;

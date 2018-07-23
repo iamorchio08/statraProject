@@ -7,7 +7,7 @@
       "direction": "in",
       "name": "req",
       "route": "validateQuery",
-      "methods": [ "get" ]
+      "methods": [ "post" ]
     },
     {
       "type": "http",
